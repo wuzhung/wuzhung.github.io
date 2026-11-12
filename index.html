@@ -909,6 +909,7 @@ a:focus:not(:focus-visible),button:focus:not(:focus-visible){outline:none}
 }
 @media (max-width:640px){html.hs-det nav.pf-menu:not(.pf-menu-l){z-index:65!important}}   /* phones: Info stays in the corner while a work is open, like WZ.PORTFOLIO */
 @supports (height:100dvh){.pf-root{height:100dvh!important}}   /* phones: the page is as tall as what is actually visible, so nothing sits under the browser's own toolbar */
+@media (max-width:640px){.hs-cr{grid-template-columns:auto 1fr!important;column-gap:clamp(22px,7vw,40px)!important}.hs-ct{margin-top:44px!important}}   /* phones: the client name takes the whole width beside the year; the title starts below the close cross */
 </style>
 </helmet>
 <div ref="{{setScroller}}" class="pf-root" style="position: relative; width: 100%; height: 100vh; min-height: 560px; overflow: hidden; background: #f3f2f0; overscroll-behavior: none">
@@ -4460,8 +4461,9 @@ class Component extends DCLogic {
     const onMove = (e) => { if (y0 == null || !e.touches[0]) return; const y = e.touches[0].clientY, d = y0 - y, now = performance.now(); y0 = y;
       const v0 = card._v || 0, v = apply(v0 + d); const dt = Math.max(1, now - last) / 1000; last = now; vel = vel * 0.6 + ((v - v0) / dt) * 0.4; if (e.cancelable) e.preventDefault(); };
     const onEnd = () => { if (y0 == null) return; y0 = null; if (performance.now() - last > 90) vel = 0; coast(); };
-    const bind = (el) => { if (!el || el._sheetOn) return; el._sheetOn = true; el.addEventListener('touchstart', onStart, { passive: true }); el.addEventListener('touchmove', onMove, { passive: false }); el.addEventListener('touchend', onEnd); el.addEventListener('touchcancel', onEnd); };
-    bind(card);
+    const onWheel = (e) => { if (window.innerWidth > 640) return; cancelAnimationFrame(raf); const d = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY; apply((card._v || 0) + d); e.preventDefault(); e.stopPropagation(); };   // a mouse wheel or trackpad scrolls the same page
+    const bind = (el) => { if (!el || el._sheetOn) return; el._sheetOn = true; el.addEventListener('wheel', onWheel, { passive: false }); el.addEventListener('touchstart', onStart, { passive: true }); el.addEventListener('touchmove', onMove, { passive: false }); el.addEventListener('touchend', onEnd); el.addEventListener('touchcancel', onEnd); };
+    bind(card); bind(card.parentElement && card.parentElement.querySelector('.hs-veil'));   // (the blurred field around the card scrolls the page too)
     this._hsSheetReset = () => { cancelAnimationFrame(raf); card._v = 0; card.style.transform = ''; card.style.height = ''; card.style.bottom = ''; card.style.webkitMaskImage = card.style.maskImage = ''; if (this._hsLc) this._hsLc.style.webkitMaskImage = this._hsLc.style.maskImage = ''; { const vm = card.querySelector('.hs-vm'); if (vm) vm.style.bottom = ''; } const s = sc(); if (s) s.style.overflow = ''; const l = lc(); bind(l); if (l) l.style.transform = '';
       if (window.innerWidth <= 640) requestAnimationFrame(() => { if (card._v === 0 && this._hsKt) apply(0, false); }); };
   }
