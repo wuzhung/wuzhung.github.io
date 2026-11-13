@@ -914,7 +914,7 @@ a:focus:not(:focus-visible),button:focus:not(:focus-visible){outline:none}
 @media (min-width:1024px) and (max-aspect-ratio:3/2){.pf-hl h2 .hl-big{font-size:min(8.4vw,14.8vh,186px)!important}.pf-hl{padding-left:17%!important}}   /* squarer desktop windows: the width is the limit, so the headline grows into it and sits a little further right */
 @media (min-width:1024px){.pf-foot{bottom:26px!important}.pf-hl{bottom:34px!important}}   /* desktop: the Taipei clock sits a little higher */
 html.wz-night .hs-card{box-shadow:0 30px 120px -20px rgba(0,0,0,.12)!important}html.wz-night .hs-veil{background:rgba(12,16,24,.6)!important;-webkit-backdrop-filter:blur(18px) saturate(.9)!important;backdrop-filter:blur(18px) saturate(.9)!important}   /* night: a softer shadow under the card, and a deeper wash behind it */
-</style>
+@media (min-width:1024px){.pf-foot{bottom:16px!important}.pf-hl{bottom:24px!important}.pf-sound{bottom:calc(3% - 47px)!important}}</style>
 </helmet>
 <div ref="{{setScroller}}" class="pf-root" style="position: relative; width: 100%; height: 100vh; min-height: 560px; overflow: hidden; background: #f3f2f0; overscroll-behavior: none">
 <div style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; background: radial-gradient(90% 80% at 50% 42%, #ffffff 0%, #fbfbfb 55%, #f1f1f2 100%); opacity: {{s1Op}}; filter: blur({{s1Blur}}); transform: translateY({{s1Y}}) scale({{s1S}}); transform-origin: 50% 40%; pointer-events: {{s1Pe}}; transition: opacity .75s ease {{s1Delay}}, filter .75s ease {{s1Delay}}, transform .9s cubic-bezier(.22,1,.36,1) {{s1Delay}}; font-family: 'Geist', 'Noto Sans TC', 'PingFang TC', sans-serif; color: #1c1d22">
