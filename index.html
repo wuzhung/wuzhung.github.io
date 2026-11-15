@@ -4896,7 +4896,7 @@ class Component extends DCLogic {
     const [en, zh] = R[i]; let k = 0;
     const chars = (s) => s.split(' ').map((w) => `<span class="rw">${Array.from(w).map((c) => `<span class="rc" style="--i: ${k++}">${c}</span>`).join('')}</span>`).join(' ');   // letter by letter, like the headline
     const l1 = chars('I heard a rumor…'), l2 = chars(en);
-    h.innerHTML = `<span class="sr">I heard a rumor… ${en} 聽說…${zh}</span><span aria-hidden="true">${l1}<br>${l2}<span class="rc zh" style="--i: ${k + 6}">聽說…${zh}</span></span>`;
+    h.innerHTML = `<span class="sr">I heard a rumor… ${en} 我聽到一個謠言…${zh}</span><span aria-hidden="true">${l1}<br>${l2}<span class="rc zh" style="--i: ${k + 6}">我聽到一個謠言…${zh}</span></span>`;
   }
   _clockStart() {
     let fmt = null;
