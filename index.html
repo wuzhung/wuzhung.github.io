@@ -1412,7 +1412,7 @@ class WindGrass {
 
   _frame(ts) {
     const ctx = this._ctx; if (!ctx || !this._N) return;
-    if (document.hidden) { this._last = ts; return; }
+    if (document.hidden || (window.innerWidth <= 640 && document.documentElement.classList.contains('hs-det'))) { this._last = ts; return; }   // (on phones the field holds still behind an open work: it sits under a heavy blur, and redrawing it would steal frames from the scrolling)
     const rawMs = this._last ? ts - this._last : 16.7;
     let dt = this._last ? Math.min(0.05, (ts - this._last) / 1000) : 0.016;
     this._last = ts;
@@ -4454,25 +4454,35 @@ class Component extends DCLogic {
     const lc = () => this._hsLc;
     const full = () => { const s = sc(); return s ? s.scrollHeight : card.offsetHeight; };
     const max = () => { const H = (card.parentElement && card.parentElement.clientHeight) || window.innerHeight; return Math.max(0, ct() + full() - (H - 8)); };
-    const apply = (v, live) => { v = Math.max(0, Math.min(max(), v)); card._v = v; const s = sc();
-      if (s) { s.style.overflow = 'hidden'; s.scrollTop = 0; }
-      if (live !== false) card.style.transition = 'none'; card.style.bottom = 'auto'; card.style.height = full() + 'px'; card.style.transform = v ? `translateY(${(-v).toFixed(1)}px)` : '';   // (at rest the card keeps its own entrance)
-      const l = lc(); if (l) l.style.transform = v ? `translateY(${(-v).toFixed(1)}px)` : '';
-      const fade = (el, top) => { if (!el) return; const m = v ? `linear-gradient(to bottom, transparent ${(44 - top).toFixed(1)}px, #000 ${(84 - top).toFixed(1)}px)` : ''; el.style.webkitMaskImage = m; el.style.maskImage = m; };   // what slides up melts away under the header (masked on the moving pieces only, so the blur behind the card stays as it was)
-      fade(card, ct() - v); if (l) fade(l, l.offsetTop - v);
-      const vm = card.querySelector('.hs-vbt, .hs-vm'); if (vm) { const H = (card.parentElement && card.parentElement.clientHeight) || window.innerHeight; vm.style.bottom = Math.max(20, ct() - v + full() - H + 20).toFixed(1) + 'px'; }   // View more stays at the foot of the screen
+    let G = null, rq = 0, tgt = null;
+    const prep = () => {   // measure once per gesture (not on every finger move): reading layout after writing styles forces the phone to lay the page out again and again
+      const s = sc(); if (s) { s.style.overflow = 'hidden'; s.scrollTop = 0; }
+      const H = (card.parentElement && card.parentElement.clientHeight) || window.innerHeight, c = ct(), f = full(), l = lc();
+      G = { H, c, f, max: Math.max(0, c + f - (H - 8)), lt: l ? l.offsetTop : 0, lh: l ? l.offsetHeight : 0, m: false };
+      card.style.bottom = 'auto'; card.style.height = f + 'px'; card.style.willChange = 'transform'; if (l) l.style.willChange = 'transform'; };
+    const mask = (el, on, h) => { if (!el) return; const m = on ? 'linear-gradient(to bottom, transparent 44px, #000 84px)' : '';   // one fixed gradient in screen space; only its position follows the scroll (cheaper than drawing a new gradient every frame)
+      el.style.webkitMaskImage = el.style.maskImage = m; el.style.webkitMaskRepeat = el.style.maskRepeat = on ? 'no-repeat' : ''; el.style.webkitMaskSize = el.style.maskSize = on ? `100% ${Math.round(h + G.H + 200)}px` : ''; };
+    const apply = (v, live) => { if (!G) prep(); v = Math.max(0, Math.min(G.max, v)); card._v = v;
+      if (live !== false) card.style.transition = 'none';
+      const tr = v ? `translate3d(0,${(-v).toFixed(1)}px,0)` : ''; card.style.transform = tr;   // (at rest the card keeps its own entrance)
+      const l = lc(); if (l) l.style.transform = tr;
+      const on = v > 0; if (on !== G.m) { G.m = on; mask(card, on, G.f); mask(l, on, G.lh); }   // what slides up melts away under the header (masked on the moving pieces only, so the blur behind the card stays as it was)
+      if (on) { const pc = `0 ${(v - G.c).toFixed(1)}px`; card.style.webkitMaskPosition = card.style.maskPosition = pc; if (l) { const pl = `0 ${(v - G.lt).toFixed(1)}px`; l.style.webkitMaskPosition = l.style.maskPosition = pl; } }
+      const vm = card.querySelector('.hs-vbt, .hs-vm'); if (vm) vm.style.bottom = Math.max(20, G.c - v + G.f - G.H + 20).toFixed(1) + 'px';   // View more stays at the foot of the screen
       return v; };
+    const flush = () => { rq = 0; if (tgt != null) { apply(tgt); tgt = null; } };
     const coast = () => { cancelAnimationFrame(raf); let t0 = performance.now();
       const step = (now) => { const dt = Math.min(0.05, (now - t0) / 1000); t0 = now; vel *= Math.pow(0.04, dt); if (Math.abs(vel) < 20) return; const v0 = card._v || 0, v = apply(v0 + vel * dt); if (v === v0) return; raf = requestAnimationFrame(step); };
       raf = requestAnimationFrame(step); };
-    const onStart = (e) => { if (window.innerWidth > 640 || !e.touches[0]) { y0 = null; return; } cancelAnimationFrame(raf); y0 = e.touches[0].clientY; last = performance.now(); vel = 0; };
+    const onStart = (e) => { if (window.innerWidth > 640 || !e.touches[0]) { y0 = null; return; } cancelAnimationFrame(raf); prep(); y0 = e.touches[0].clientY; last = performance.now(); vel = 0; };
     const onMove = (e) => { if (y0 == null || !e.touches[0]) return; const y = e.touches[0].clientY, d = y0 - y, now = performance.now(); y0 = y;
-      const v0 = card._v || 0, v = apply(v0 + d); const dt = Math.max(1, now - last) / 1000; last = now; vel = vel * 0.6 + ((v - v0) / dt) * 0.4; if (e.cancelable) e.preventDefault(); };
-    const onEnd = () => { if (y0 == null) return; y0 = null; if (performance.now() - last > 90) vel = 0; coast(); };
+      const v0 = tgt != null ? tgt : (card._v || 0), v = Math.max(0, Math.min(G ? G.max : 1e9, v0 + d)); tgt = v; if (!rq) rq = requestAnimationFrame(flush);   // the finger can fire several moves per frame: draw once per frame
+      const dt = Math.max(1, now - last) / 1000; last = now; vel = vel * 0.6 + ((v - v0) / dt) * 0.4; if (e.cancelable) e.preventDefault(); };
+    const onEnd = () => { if (y0 == null) return; y0 = null; if (rq) { cancelAnimationFrame(rq); flush(); } if (performance.now() - last > 90) vel = 0; coast(); };
     const onWheel = (e) => { if (window.innerWidth > 640) return; cancelAnimationFrame(raf); const d = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY; apply((card._v || 0) + d); e.preventDefault(); e.stopPropagation(); };   // a mouse wheel or trackpad scrolls the same page
     const bind = (el) => { if (!el || el._sheetOn) return; el._sheetOn = true; el.addEventListener('wheel', onWheel, { passive: false }); el.addEventListener('touchstart', onStart, { passive: true }); el.addEventListener('touchmove', onMove, { passive: false }); el.addEventListener('touchend', onEnd); el.addEventListener('touchcancel', onEnd); };
     bind(card); bind(card.parentElement && card.parentElement.querySelector('.hs-veil'));   // (the blurred field around the card scrolls the page too)
-    this._hsSheetReset = () => { cancelAnimationFrame(raf); card._v = 0; card.style.transform = ''; card.style.height = ''; card.style.bottom = ''; card.style.webkitMaskImage = card.style.maskImage = ''; if (this._hsLc) this._hsLc.style.webkitMaskImage = this._hsLc.style.maskImage = ''; { const vm = card.querySelector('.hs-vbt, .hs-vm'); if (vm) vm.style.bottom = ''; } const s = sc(); if (s) s.style.overflow = ''; const l = lc(); bind(l); if (l) l.style.transform = '';
+    this._hsSheetReset = () => { cancelAnimationFrame(raf); if (rq) cancelAnimationFrame(rq); rq = 0; tgt = null; G = null; card._v = 0; card.style.willChange = ''; if (this._hsLc) this._hsLc.style.willChange = ''; card.style.transform = ''; card.style.height = ''; card.style.bottom = ''; card.style.webkitMaskImage = card.style.maskImage = ''; card.style.webkitMaskPosition = card.style.maskPosition = ''; if (this._hsLc) { this._hsLc.style.webkitMaskImage = this._hsLc.style.maskImage = ''; this._hsLc.style.webkitMaskPosition = this._hsLc.style.maskPosition = ''; } { const vm = card.querySelector('.hs-vbt, .hs-vm'); if (vm) vm.style.bottom = ''; } const s = sc(); if (s) s.style.overflow = ''; const l = lc(); bind(l); if (l) l.style.transform = '';
       if (window.innerWidth <= 640) requestAnimationFrame(() => { if (card._v === 0 && this._hsKt) apply(0, false); }); };
   }
   _zsAfterLock(fn) {   // the way back can't start while the way in is still locked: wait for it, then go
