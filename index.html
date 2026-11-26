@@ -4472,13 +4472,16 @@ class Component extends DCLogic {
       return v; };
     const flush = () => { rq = 0; if (tgt != null) { apply(tgt); tgt = null; } };
     const coast = () => { cancelAnimationFrame(raf); let t0 = performance.now();
-      const step = (now) => { const dt = Math.min(0.05, (now - t0) / 1000); t0 = now; vel *= Math.pow(0.04, dt); if (Math.abs(vel) < 20) return; const v0 = card._v || 0, v = apply(v0 + vel * dt); if (v === v0) return; raf = requestAnimationFrame(step); };
+      const step = (now) => { const dt = Math.min(0.05, (now - t0) / 1000); t0 = now; vel *= Math.pow(0.11, dt); if (Math.abs(vel) < 8) return; const v0 = card._v || 0, v = apply(v0 + vel * dt); if (v === v0) return; raf = requestAnimationFrame(step); };
       raf = requestAnimationFrame(step); };
-    const onStart = (e) => { if (window.innerWidth > 640 || !e.touches[0]) { y0 = null; return; } cancelAnimationFrame(raf); prep(); y0 = e.touches[0].clientY; last = performance.now(); vel = 0; };
+    let smp = [];
+    const onStart = (e) => { if (window.innerWidth > 640 || !e.touches[0]) { y0 = null; return; } cancelAnimationFrame(raf); prep(); y0 = e.touches[0].clientY; last = performance.now(); vel = 0; smp = [{ t: last, v: card._v || 0 }]; };
     const onMove = (e) => { if (y0 == null || !e.touches[0]) return; const y = e.touches[0].clientY, d = y0 - y, now = performance.now(); y0 = y;
       const v0 = tgt != null ? tgt : (card._v || 0), v = Math.max(0, Math.min(G ? G.max : 1e9, v0 + d)); tgt = v; if (!rq) rq = requestAnimationFrame(flush);   // the finger can fire several moves per frame: draw once per frame
-      const dt = Math.max(1, now - last) / 1000; last = now; vel = vel * 0.6 + ((v - v0) / dt) * 0.4; if (e.cancelable) e.preventDefault(); };
-    const onEnd = () => { if (y0 == null) return; y0 = null; if (rq) { cancelAnimationFrame(rq); flush(); } if (performance.now() - last > 90) vel = 0; coast(); };
+      last = now; smp.push({ t: now, v }); if (smp.length > 12) smp.shift(); if (e.cancelable) e.preventDefault(); };
+    const onEnd = () => { if (y0 == null) return; y0 = null; if (rq) { cancelAnimationFrame(rq); flush(); } const now = performance.now();
+      { const r = smp.filter((p) => last - p.t < 110); vel = 0; if (r.length > 1 && now - last < 140) { const a = r[0], z = r[r.length - 1], dt = (z.t - a.t) / 1000; if (dt > 0.008) vel = Math.max(-6000, Math.min(6000, (z.v - a.v) / dt)); } }   // the flick's speed over its last ~0.1s carries on after the finger lifts
+      coast(); };
     const onWheel = (e) => { if (window.innerWidth > 640) return; cancelAnimationFrame(raf); const d = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY; apply((card._v || 0) + d); e.preventDefault(); e.stopPropagation(); };   // a mouse wheel or trackpad scrolls the same page
     const bind = (el) => { if (!el || el._sheetOn) return; el._sheetOn = true; el.addEventListener('wheel', onWheel, { passive: false }); el.addEventListener('touchstart', onStart, { passive: true }); el.addEventListener('touchmove', onMove, { passive: false }); el.addEventListener('touchend', onEnd); el.addEventListener('touchcancel', onEnd); };
     bind(card); bind(card.parentElement && card.parentElement.querySelector('.hs-veil'));   // (the blurred field around the card scrolls the page too)
